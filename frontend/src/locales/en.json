@@ -1,0 +1,108 @@
+{
+  "header": {
+    "title": "Internet Monitor",
+    "status": {
+      "live": "Live",
+      "connecting": "Connecting...",
+      "reconnecting": "Reconnecting ({{count}})...",
+      "disconnected": "Disconnected",
+      "retryNow": "Retry now"
+    },
+    "buttons": {
+      "testSpeed": "Test Speed",
+      "cancel": "Cancel",
+      "cancelWithCountdown": "Cancel ({{seconds}}s)",
+      "exportReport": "Export Report"
+    }
+  },
+  "dashboard": {
+    "title": "Real-time Internet Monitoring",
+    "subtitle": "Monitor your internet connection quality in real-time",
+    "reconnecting": {
+      "title": "Reconnecting to server...",
+      "attempt": "Attempt {{count}}"
+    }
+  },
+  "speedTest": {
+    "title": "Speed Test",
+    "currentSpeed": "Current Speed",
+    "download": "Download",
+    "upload": "Upload",
+    "ping": "Ping",
+    "jitter": "Jitter",
+    "testing": "Testing",
+    "runningTest": "Running speed test...",
+    "testResult": "Real-time test result • {{seconds}}s remaining",
+    "testFailed": "Test failed - connection offline",
+    "offline": "Connection offline",
+    "loading": "Loading...",
+    "fromAvg": "{{percent}}% from avg",
+    "error": "Error: {{message}}"
+  },
+  "connectionStatus": {
+    "title": "Connection Quality",
+    "excellent": "Excellent",
+    "good": "Good",
+    "fair": "Fair",
+    "poor": "Poor",
+    "veryPoor": "Very Poor",
+    "offline": "Offline",
+    "connecting": "Connecting...",
+    "loading": "Loading...",
+    "online": "Online",
+    "uptime": "Uptime",
+    "noData": "No data available"
+  },
+  "disconnections": {
+    "title": "Disconnections Today",
+    "count": "{{count}} events",
+    "noDisconnections": "No disconnections",
+    "stable": "Stable connection"
+  },
+  "avgSpeed": {
+    "title": "Average Speed",
+    "download": "Download",
+    "upload": "Upload",
+    "calculating": "Calculating...",
+    "noData": "No data available"
+  },
+  "speedChart": {
+    "title": "Speed Chart",
+    "download": "Download",
+    "upload": "Upload",
+    "loading": "Loading data..."
+  },
+  "connectionEvents": {
+    "title": "Connection Events",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "noEvents": "No connection events",
+    "loading": "Loading events..."
+  },
+  "timeRange": {
+    "1h": "Last 1 hour",
+    "6h": "Last 6 hours",
+    "12h": "Last 12 hours",
+    "24h": "Last 24 hours",
+    "7d": "Last 7 days",
+    "30d": "Last 30 days"
+  },
+  "detailedStats": {
+    "title": "Detailed Statistics",
+    "viewAll": "View All Statistics"
+  },
+  "sidebar": {
+    "realtimeMonitor": "Real-time Monitor",
+    "historicalReports": "Historical Reports",
+    "statistics": "Statistics",
+    "settings": "Settings"
+  },
+  "footer": {
+    "rights": "© 2024 Internet Monitor. All rights reserved."
+  },
+  "units": {
+    "mbps": "Mbps",
+    "ms": "ms",
+    "percent": "%"
+  }
+}

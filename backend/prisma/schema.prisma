@@ -1,0 +1,45 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:../data/monitor.db"
+}
+
+model Measurement {
+  id                  Int     @id @default(autoincrement())
+  timestamp           String
+  status              String
+  downloadMbps        Float?
+  uploadMbps          Float?
+  latencyMs           Float?
+  jitterMs            Float?
+  packetLoss          Float?
+  durationSinceLastMs Int?
+  estimatedDowntimeMs Int?
+  error               String? // JSON string
+  meta                String? // JSON string
+  server              String? // JSON string
+  client              String? // JSON string
+  createdAt           Int     @default(0)
+
+  @@index([timestamp])
+  @@index([status])
+  @@map("measurements")
+}
+
+model Event {
+  id        String  @id
+  type      String
+  timestamp String
+  metadata  String? // JSON string
+  createdAt Int     @default(0)
+
+  @@index([timestamp])
+  @@index([type])
+  @@map("events")
+}

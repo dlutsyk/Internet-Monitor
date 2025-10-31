@@ -1,0 +1,98 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: internet-monitor-backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      # Server Configuration
+      - NODE_ENV=production
+      - PORT=3001
+      - HOST=0.0.0.0
+
+      # Database
+      - DATABASE_URL=file:/app/data/monitor.db
+
+      # Monitoring Configuration
+      - MONITOR_INTERVAL_MS=600000
+      - SPEED_DROP_THRESHOLD_MBPS=15
+      - SPEED_DROP_PERCENT=30
+      - RETENTION_HOURS=168
+      - SPEED_TEST_MAX_TIME=20000
+      - SIMULATION_MODE=false
+
+      # Network Speed Test Configuration
+      # Using 20MB download and 5MB upload for accurate measurements on fast connections
+      - NETWORK_TEST_FILE_SIZE_BYTES=20000000
+      - NETWORK_TEST_UPLOAD_SIZE_BYTES=5000000
+      - NETWORK_TEST_MAX_RETRIES=3
+      - NETWORK_TEST_TIMEOUT_MS=30000
+      - NETWORK_TEST_CONNECTIVITY_URL=https://www.google.com
+      - NETWORK_TEST_MAX_REALISTIC_SPEED=1000
+      - NETWORK_TEST_MAX_REALISTIC_UPLOAD_SPEED=500
+
+      # WebSocket Configuration
+      - WS_PATH=/ws
+
+      # Archive Configuration
+      - ARCHIVE_ENABLED=true
+      - ARCHIVE_HOUR=0
+      - ARCHIVE_RETENTION_DAYS=30
+
+      # Data Directory
+      - DATA_DIR=/app/data
+
+      # Logging
+      - HTTP_LOGGING=true
+    volumes:
+      # Persist data directory with database and measurements
+      - backend-data:/app/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - monitor-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # Frontend build-time environment variables
+        - VITE_API_BASE_URL=/api
+        - VITE_WS_PATH=/ws
+        - VITE_WS_INITIAL_RECONNECT_DELAY=3000
+        - VITE_WS_MAX_RECONNECT_DELAY=30000
+        - VITE_MAX_RECENT_MEASUREMENTS=200
+        - VITE_APP_NAME=Internet Monitor
+    container_name: internet-monitor-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - monitor-network
+
+volumes:
+  backend-data:
+    driver: local
+    name: internetmonitor_backend-data
+
+networks:
+  monitor-network:
+    driver: bridge
+    name: internet-monitor-network
