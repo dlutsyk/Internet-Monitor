@@ -1,8 +1,5 @@
 import 'dotenv/config';
 import http from 'node:http';
-import path from 'node:path';
-import fs from 'node:fs';
-import { fileURLToPath } from 'node:url';
 
 import express from 'express';
 import cors from 'cors';
@@ -15,10 +12,6 @@ import * as websocket from './websocket.js';
 import { createRoutes } from './routes/index.js';
 
 const logger = console;
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const resolveFrontendDir = () => path.resolve(__dirname, '../../frontend/dist');
 
 /**
  * Bootstrap application
@@ -56,18 +49,6 @@ async function bootstrap() {
 
     // API Routes
     app.use('/api', createRoutes(config));
-
-    // Serve frontend
-    const frontendDir = resolveFrontendDir();
-    if (fs.existsSync(frontendDir)) {
-      app.use(express.static(frontendDir));
-      app.get('*', (req, res) => {
-        res.sendFile(path.join(frontendDir, 'index.html'));
-      });
-      logger.info('[server] serving frontend from', frontendDir);
-    } else {
-      logger.warn('[server] frontend build not found at', frontendDir);
-    }
 
     // Error handling middleware
     app.use((err, req, res, next) => {

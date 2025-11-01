@@ -77,6 +77,56 @@ async function computeTodayStats() {
 }
 
 /**
+ * Compute detailed stats for a given time period
+ */
+async function computeDetailedStats(hours) {
+  const now = new Date();
+  const from = new Date(now.getTime() - hours * 60 * 60 * 1000);
+  const to = now;
+
+  // Get measurements for the period
+  const measurements = await db.getMeasurementsByDateRange(from.toISOString(), to.toISOString());
+
+  // Parse JSON fields
+  const parsed = measurements.map((m) => ({
+    ...m,
+    error: m.error ? JSON.parse(m.error) : null,
+    meta: m.meta ? JSON.parse(m.meta) : null,
+    server: m.server ? JSON.parse(m.server) : null,
+    client: m.client ? JSON.parse(m.client) : null,
+  }));
+
+  // Compute summary
+  const summary = analytics.computeSummary(parsed, config);
+
+  // Get events for the period
+  const events = await db.getEventsByDateRange(from.toISOString(), to.toISOString());
+
+  // Group events by type
+  const eventsByType = events.reduce((acc, event) => {
+    if (!acc[event.type]) {
+      acc[event.type] = [];
+    }
+    acc[event.type].push(event);
+    return acc;
+  }, {});
+
+  // Get database stats
+  const dbStats = await db.getDatabaseStats();
+
+  return {
+    period: {
+      hours,
+      from: from.toISOString(),
+      to: to.toISOString(),
+    },
+    summary,
+    events: eventsByType,
+    dbStats,
+  };
+}
+
+/**
  * Setup event listeners for monitor events
  */
 function setupEventListeners(monitorEvents) {
@@ -143,6 +193,18 @@ function setupConnectionHandler() {
 
     // Send initial data
     try {
+      // Send recent measurements
+      const recentMeasurements = await db.getRecentMeasurements(100);
+      const parsedRecent = recentMeasurements.map((m) => ({
+        ...m,
+        error: m.error ? JSON.parse(m.error) : null,
+        meta: m.meta ? JSON.parse(m.meta) : null,
+        server: m.server ? JSON.parse(m.server) : null,
+        client: m.client ? JSON.parse(m.client) : null,
+      }));
+      ws.send(JSON.stringify({ type: 'recent', payload: parsedRecent }));
+
+      // Send latest measurement
       const latest = await db.getLatestMeasurement();
       if (latest) {
         ws.send(
@@ -161,6 +223,10 @@ function setupConnectionHandler() {
 
       const todayStats = await computeTodayStats();
       ws.send(JSON.stringify({ type: 'today-stats', payload: todayStats }));
+
+      // Send initial detailed stats (24h)
+      const detailedStats = await computeDetailedStats(24);
+      ws.send(JSON.stringify({ type: 'detailed-stats', payload: detailedStats }));
     } catch (error) {
       logger.error('[websocket] failed to send initial data:', error);
     }
@@ -202,12 +268,38 @@ async function handleClientMessage(ws, clientIp, message) {
       }
       break;
 
+    case 'get-recent':
+      try {
+        const recentMeasurements = await db.getRecentMeasurements(100);
+        const parsedRecent = recentMeasurements.map((m) => ({
+          ...m,
+          error: m.error ? JSON.parse(m.error) : null,
+          meta: m.meta ? JSON.parse(m.meta) : null,
+          server: m.server ? JSON.parse(m.server) : null,
+          client: m.client ? JSON.parse(m.client) : null,
+        }));
+        ws.send(JSON.stringify({ type: 'recent', payload: parsedRecent }));
+      } catch (error) {
+        logger.error('[websocket] failed to get recent measurements:', error);
+      }
+      break;
+
     case 'get-today-stats':
       try {
         const todayStats = await computeTodayStats();
         ws.send(JSON.stringify({ type: 'today-stats', payload: todayStats }));
       } catch (error) {
         logger.error('[websocket] failed to get today stats:', error);
+      }
+      break;
+
+    case 'request-detailed-stats':
+      try {
+        const hours = message.payload?.hours || 24;
+        const detailedStats = await computeDetailedStats(hours);
+        ws.send(JSON.stringify({ type: 'detailed-stats', payload: detailedStats }));
+      } catch (error) {
+        logger.error('[websocket] failed to get detailed stats:', error);
       }
       break;
 
