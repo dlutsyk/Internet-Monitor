@@ -3,10 +3,10 @@ import { cn } from '../utils/cn';
 // Helper function to format event type for display
 const formatEventType = (type) => {
   const typeMap = {
-    'connection-lost': 'Connection lost',
-    'connection-restored': 'Connection restored',
-    'speed-degradation': 'Speed degradation',
-    'speed-improved': 'Speed improved',
+    'connection_lost': 'Connection lost',
+    'connection_restored': 'Connection restored',
+    'speed_degradation': 'Speed degradation',
+    'speed_improved': 'Speed improved',
   };
   return typeMap[type] || type;
 };
@@ -20,10 +20,10 @@ const formatEventTime = (timestamp) => {
 // Helper function to get event color
 const getEventColor = (type) => {
   const colorMap = {
-    'connection-lost': 'bg-red-500',
-    'connection-restored': 'bg-green-500',
-    'speed-degradation': 'bg-orange-500',
-    'speed-improved': 'bg-blue-500',
+    'connection_lost': 'bg-red-500',
+    'connection_restored': 'bg-green-500',
+    'speed_degradation': 'bg-orange-500',
+    'speed_improved': 'bg-blue-500',
   };
   return colorMap[type] || 'bg-neutral-500';
 };
@@ -31,10 +31,10 @@ const getEventColor = (type) => {
 // Helper function to get event pulse color
 const getEventPulseColor = (type) => {
   const colorMap = {
-    'connection-lost': 'animate-pulse-red',
-    'connection-restored': 'animate-pulse-green',
-    'speed-degradation': 'animate-pulse-orange',
-    'speed-improved': 'animate-pulse-blue',
+    'connection_lost': 'animate-pulse-red',
+    'connection_restored': 'animate-pulse-green',
+    'speed_degradation': 'animate-pulse-orange',
+    'speed_improved': 'animate-pulse-blue',
   };
   return colorMap[type] || '';
 };

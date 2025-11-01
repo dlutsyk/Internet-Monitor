@@ -260,13 +260,13 @@ export default function DetailedStatistics() {
             <div className={cn("flex justify-between")}>
               <span className={cn("text-xs text-neutral-500")}>Connection Lost:</span>
               <span className={cn("text-sm font-medium text-red-600")}>
-                {events?.['connection-lost']?.length ?? 0}
+                {events?.['connection_lost']?.length ?? 0}
               </span>
             </div>
             <div className={cn("flex justify-between")}>
               <span className={cn("text-xs text-neutral-500")}>Connection Restored:</span>
               <span className={cn("text-sm font-medium text-green-600")}>
-                {events?.['connection-restored']?.length ?? 0}
+                {events?.['connection_restored']?.length ?? 0}
               </span>
             </div>
           </div>
@@ -284,7 +284,7 @@ export default function DetailedStatistics() {
             <div className={cn("flex justify-between")}>
               <span className={cn("text-xs text-neutral-500")}>Speed Improved:</span>
               <span className={cn("text-sm font-medium text-green-600")}>
-                {events?.['speed-improved']?.length ?? 0}
+                {events?.['speed_improved']?.length ?? 0}
               </span>
             </div>
           </div>

@@ -7,7 +7,10 @@ export async function getRecent(req, res, next) {
   try {
     const limit = parseInt(req.query.limit) || 50;
     const events = await eventsService.getRecent(limit);
-    res.json(events);
+    res.json({
+      events,
+      count: events.length,
+    });
   } catch (error) {
     next(error);
   }
@@ -27,7 +30,12 @@ export async function getByDateRange(req, res, next) {
     }
 
     const events = await eventsService.getByDateRange(from, to);
-    res.json(events);
+    res.json({
+      events,
+      count: events.length,
+      from,
+      to,
+    });
   } catch (error) {
     next(error);
   }

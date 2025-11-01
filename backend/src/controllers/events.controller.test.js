@@ -30,7 +30,10 @@ describe('events.controller', () => {
       await getRecent(req, res, next);
 
       expect(eventsService.getRecent).toHaveBeenCalledWith(50);
-      expect(res.json).toHaveBeenCalledWith(mockEvents);
+      expect(res.json).toHaveBeenCalledWith({
+        events: mockEvents,
+        count: mockEvents.length,
+      });
       expect(next).not.toHaveBeenCalled();
     });
 
@@ -43,7 +46,10 @@ describe('events.controller', () => {
       await getRecent(req, res, next);
 
       expect(eventsService.getRecent).toHaveBeenCalledWith(100);
-      expect(res.json).toHaveBeenCalledWith(mockEvents);
+      expect(res.json).toHaveBeenCalledWith({
+        events: mockEvents,
+        count: mockEvents.length,
+      });
     });
 
     it('should handle non-numeric limit', async () => {
@@ -83,7 +89,12 @@ describe('events.controller', () => {
       await getByDateRange(req, res, next);
 
       expect(eventsService.getByDateRange).toHaveBeenCalledWith(req.query.from, req.query.to);
-      expect(res.json).toHaveBeenCalledWith(mockEvents);
+      expect(res.json).toHaveBeenCalledWith({
+        events: mockEvents,
+        count: mockEvents.length,
+        from: req.query.from,
+        to: req.query.to,
+      });
       expect(next).not.toHaveBeenCalled();
     });
 

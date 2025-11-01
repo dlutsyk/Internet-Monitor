@@ -87,35 +87,49 @@ async function performSpeedTest() {
   // Try speed test with retries
   const maxRetries = config.networkTest.maxRetries || 3;
   const fileSizeBytes = config.networkTest.fileSizeBytes || 20_000_000;
+  const uploadSizeBytes = config.networkTest.uploadSizeBytes || 5_000_000;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const testSpeed = new NetworkSpeed();
-      const baseUrl = `https://httpbin.org/stream-bytes/${fileSizeBytes}`;
+      const downloadUrl = `https://httpbin.org/stream-bytes/${fileSizeBytes}`;
+      const uploadUrl = 'http://httpbin.org/post'; // network-speed library only supports http for uploads
 
-      const options = {
-        hostname: 'httpbin.org',
-        port: 443,
-        path: `/stream-bytes/${fileSizeBytes}`,
-        method: 'GET',
-        timeout: config.speedTestMaxTime || 20_000,
-      };
+      // Test download speed
+      const downloadSpeed = await testSpeed.checkDownloadSpeed(downloadUrl, fileSizeBytes);
+      const downloadMbps = Math.round(downloadSpeed.mbps * 100) / 100;
+      const latencyMs = Math.round((downloadSpeed.latency || 0) * 100) / 100;
 
-      const speed = await testSpeed.checkDownloadSpeed(baseUrl, fileSizeBytes);
-
-      const downloadMbps = Math.round(speed.mbps * 100) / 100;
-      const latencyMs = Math.round((speed.latency || 0) * 100) / 100;
-
-      // Validate reasonable speeds
+      // Validate reasonable download speed
       const maxSpeed = config.networkTest.maxRealisticSpeed || 1000;
       if (downloadMbps > maxSpeed) {
-        throw new Error(`Unrealistic speed detected: ${downloadMbps} Mbps`);
+        throw new Error(`Unrealistic download speed detected: ${downloadMbps} Mbps`);
+      }
+
+      // Test upload speed
+      let uploadMbps = null;
+      try {
+        logger.info(`[monitor] testing upload speed to ${uploadUrl}...`);
+        const uploadSpeed = await testSpeed.checkUploadSpeed(uploadUrl, uploadSizeBytes);
+        uploadMbps = Math.round(uploadSpeed.mbps * 100) / 100;
+        logger.info(`[monitor] upload test completed: ${uploadMbps} Mbps`);
+
+        // Validate reasonable upload speed
+        const maxUploadSpeed = config.networkTest.maxRealisticUploadSpeed || 500;
+        if (uploadMbps > maxUploadSpeed) {
+          logger.warn(`[monitor] unrealistic upload speed detected: ${uploadMbps} Mbps, setting to null`);
+          uploadMbps = null;
+        }
+      } catch (uploadError) {
+        logger.warn(`[monitor] upload test failed: ${uploadError.message}`);
+        // Continue with null upload speed - not critical
+        uploadMbps = null;
       }
 
       return {
         status: 'online',
         downloadMbps,
-        uploadMbps: null, // Upload test is optional
+        uploadMbps,
         latencyMs,
         jitterMs: null,
         packetLoss: null,
@@ -123,7 +137,8 @@ async function performSpeedTest() {
         meta: {
           source: 'network-speed',
           attempts: attempt,
-          testUrl: baseUrl,
+          downloadTestUrl: downloadUrl,
+          uploadTestUrl: uploadUrl,
         },
       };
     } catch (error) {
@@ -291,9 +306,15 @@ export async function performMeasurement({ force = false } = {}) {
     // Detect and store events
     const detectedEvents = detectEvents(measurement);
     for (const event of detectedEvents) {
-      await db.insertEvent(event);
-      logger.info(`[monitor] detected event: ${event.type}`);
-      events.emit('event', event);
+      try {
+        const inserted = await db.insertEvent(event);
+        logger.info(`[monitor] detected and saved event: ${event.type} (id: ${event.id})`);
+        events.emit('event', event);
+      } catch (error) {
+        logger.error(`[monitor] failed to save event ${event.type}:`, error.message);
+        // Still emit the event even if DB save fails
+        events.emit('event', event);
+      }
     }
 
     // Update previous state
