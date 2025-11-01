@@ -1,0 +1,11 @@
+{
+  "name": "internet-monitor",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "prepare": "husky || true"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7"
+  }
+}
