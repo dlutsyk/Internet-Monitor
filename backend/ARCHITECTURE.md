@@ -1,311 +1,279 @@
-# Backend Architecture Documentation
+# Backend Architecture
 
 ## Overview
 
-This backend has been refactored to follow **MVC pattern** along with **GoF**, **GRASP**, and **SOLID** design principles.
+This backend follows a **clean, simple architecture** with clear separation of concerns. It's designed to be maintainable and straightforward without over-engineering.
 
 ## Architecture Layers
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                         Routes                               │
-│                    (HTTP Endpoints)                          │
-└──────────────────────┬──────────────────────────────────────┘
-                       │
-┌──────────────────────▼──────────────────────────────────────┐
-│                      Controllers                             │
-│         (HTTP Request/Response Handling)                     │
-│   HealthController, MetricsController, etc.                  │
-└──────────────────────┬──────────────────────────────────────┘
-                       │
-┌──────────────────────▼──────────────────────────────────────┐
-│                       Services                               │
-│                  (Business Logic)                            │
-│  MonitorService, AnalyticsService, EventTrackerService       │
-└──────────────────────┬──────────────────────────────────────┘
-                       │
-┌──────────────────────▼──────────────────────────────────────┐
-│                    Repositories                              │
-│               (Data Access Layer)                            │
-│  MeasurementRepository, EventRepository                      │
-└──────────────────────┬──────────────────────────────────────┘
-                       │
-┌──────────────────────▼──────────────────────────────────────┐
-│                 Infrastructure                               │
-│          (Database, Monitoring, WebSocket)                   │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────┐
+│              Routes (HTTP Layer)            │
+│         Handle requests/responses           │
+└────────────────┬────────────────────────────┘
+                 │
+┌────────────────▼────────────────────────────┐
+│              Services Layer                 │
+│           Business Logic                    │
+└────────────────┬────────────────────────────┘
+                 │
+┌────────────────▼────────────────────────────┐
+│         Database & Utilities                │
+│      Prisma ORM, Analytics, Monitor         │
+└─────────────────────────────────────────────┘
 ```
-
-## Design Patterns Applied
-
-### 1. **MVC Pattern**
-- **Model**: Domain models (Measurement, Event, Archive)
-- **View**: HTTP responses, WebSocket messages
-- **Controller**: Controllers handle HTTP requests and delegate to services
-
-### 2. **Repository Pattern** (GoF)
-- Abstracts data access logic
-- `IMeasurementRepository`, `IEventRepository` interfaces
-- Concrete implementations: `MeasurementRepository`, `EventRepository`
-- **Benefits**: Easy to swap data sources, testable, follows DIP
-
-### 3. **Strategy Pattern** (GoF)
-- Different monitoring strategies
-- `IMonitoringStrategy` interface
-- Concrete strategies: `NetworkSpeedMonitor`, `SimulationMonitor`
-- **Benefits**: Runtime strategy selection, easy to add new monitoring methods
-
-### 4. **Factory Pattern** (GoF)
-- `MonitoringStrategyFactory` creates monitoring strategies
-- `Database` uses factory pattern for statement creation
-- **Benefits**: Encapsulates object creation, follows OCP
-
-### 5. **Singleton Pattern** (GoF)
-- `Database` class ensures single connection instance
-- **Benefits**: Prevents multiple database connections
-
-### 6. **Observer Pattern** (GoF)
-- `MonitorService` and `EventTrackerService` use EventEmitter
-- Services emit events that others can subscribe to
-- **Benefits**: Loose coupling, reactive programming
-
-### 7. **Facade Pattern** (GoF)
-- Services provide simplified interfaces to complex subsystems
-- `AnalyticsService` hides complexity of computations
-- **Benefits**: Simplified API, reduces coupling
-
-### 8. **Dependency Injection** (IoC Pattern)
-- All dependencies injected via constructors
-- `DIContainer` manages object lifecycle
-- **Benefits**: Testability, loose coupling, follows DIP
-
-## SOLID Principles Applied
-
-### 1. **Single Responsibility Principle (SRP)**
-✅ **Before**: `api.js` mixed routing, validation, and business logic
-✅ **After**: Separated into Controllers (HTTP), Services (business logic), Repositories (data access)
-
-**Example**:
-- `MetricsController` - only handles HTTP requests/responses
-- `MonitorService` - only handles monitoring business logic
-- `MeasurementRepository` - only handles data persistence
-
-### 2. **Open/Closed Principle (OCP)**
-✅ **Before**: Hard to extend without modifying existing code
-✅ **After**:
-- New monitoring strategies can be added without changing existing code
-- New repositories can be added by implementing interfaces
-- New services can be added without affecting existing ones
-
-### 3. **Liskov Substitution Principle (LSP)**
-✅ **Before**: Storage implementations not truly substitutable
-✅ **After**:
-- Any `IMonitoringStrategy` can replace another
-- Any `IMeasurementRepository` can replace another
-- Implementations honor interface contracts
-
-### 4. **Interface Segregation Principle (ISP)**
-✅ **Before**: Large classes with many methods
-✅ **After**: Focused interfaces
-- `IMeasurementRepository` - only measurement operations
-- `IEventRepository` - only event operations
-- `IMonitoringStrategy` - only measurement method
-
-### 5. **Dependency Inversion Principle (DIP)**
-✅ **Before**: High-level modules depended on low-level modules
-✅ **After**:
-- Services depend on repository interfaces, not concrete implementations
-- MonitorService depends on `IMonitoringStrategy`, not concrete monitors
-- Controllers depend on service abstractions
-
-## GRASP Principles Applied
-
-### 1. **Information Expert**
-- Each class is responsible for operations on data it has
-- `Measurement` model validates itself
-- `MeasurementRepository` knows how to persist measurements
-
-### 2. **Creator**
-- Factories create objects (`MonitoringStrategyFactory`)
-- Models have factory methods (`Measurement.fromDatabaseRow`)
-- **Benefits**: Centralized object creation
-
-### 3. **Controller**
-- Controllers coordinate application flow
-- Controllers don't contain business logic
-- **Benefits**: Separation of concerns
-
-### 4. **Low Coupling**
-- Components depend on abstractions, not concrete classes
-- Use of interfaces and dependency injection
-- **Benefits**: Flexibility, testability
-
-### 5. **High Cohesion**
-- Each class has related responsibilities
-- Services focus on single domain area
-- **Benefits**: Maintainability, understandability
-
-### 6. **Pure Fabrication**
-- `DIContainer` - doesn't represent domain concept but provides services
-- Factories - convenience classes for object creation
-
-### 7. **Indirection**
-- Repositories provide indirection between services and database
-- Strategy pattern provides indirection for monitoring implementations
 
 ## Directory Structure
 
 ```
 backend/src/
-├── models/                      # Domain Models (Entities)
-│   ├── Measurement.js          # Measurement entity
-│   ├── Event.js                # Event entity
-│   └── Archive.js              # Archive entity
+├── services/                    # Business logic services
+│   ├── metrics.service.js      # Metrics retrieval & parsing
+│   ├── events.service.js       # Event handling & parsing
+│   ├── reports.service.js      # Report generation
+│   └── statistics.service.js   # Statistics & DB maintenance
 │
-├── repositories/                # Data Access Layer
-│   ├── interfaces/
-│   │   ├── IMeasurementRepository.js
-│   │   └── IEventRepository.js
-│   └── implementations/
-│       ├── MeasurementRepository.js
-│       └── EventRepository.js
-│
-├── services/                    # Business Logic Layer
-│   ├── MonitorService.js       # Monitoring business logic
-│   ├── AnalyticsService.js     # Analytics computations
-│   ├── EventTrackerService.js  # Event tracking logic
-│   ├── ArchiveService.js       # Archiving logic
-│   └── SchedulerService.js     # Scheduling logic
-│
-├── controllers/                 # HTTP Request Handlers
-│   ├── HealthController.js
-│   ├── MetricsController.js
-│   ├── ReportsController.js
-│   ├── MonitorController.js
-│   ├── ArchiveController.js
-│   ├── EventController.js
-│   └── StatisticsController.js
-│
-├── infrastructure/              # External Concerns
-│   ├── database/
-│   │   └── Database.js         # SQLite wrapper (Singleton)
-│   ├── monitoring/
-│   │   ├── IMonitoringStrategy.js       # Strategy interface
-│   │   ├── NetworkSpeedMonitor.js       # Real monitoring
-│   │   ├── SimulationMonitor.js         # Simulation
-│   │   └── MonitoringStrategyFactory.js # Factory
-│   └── websocket/
-│       └── WebSocketServer.js  # WebSocket handling
-│
-├── middleware/                  # Express Middleware
-│   ├── errorHandler.js
-│   └── requestValidator.js
-│
-├── routes/                      # Route Definitions
-│   └── index.js
-│
-├── utils/                       # Utilities
-│   ├── logger.js
-│   └── validators.js
-│
-├── container/                   # Dependency Injection
-│   └── DIContainer.js
-│
-├── config/                      # Configuration
-│   └── index.js
-│
-└── server.js                    # Application Entry Point
+├── db.js                        # Database connection & queries
+├── monitor.js                   # Network monitoring & event detection
+├── analytics.js                 # Analytics computations
+├── routes.js                    # API route definitions
+├── websocket.js                 # WebSocket server
+├── config.js                    # Configuration
+└── server.js                    # Application entry point
 ```
 
-## Key Improvements
+## File Descriptions
 
-### Before vs After
+### Core Files
 
-| Aspect | Before | After |
-|--------|--------|-------|
-| **Architecture** | Procedural, mixed concerns | Layered MVC with clear separation |
-| **Business Logic** | Scattered across files | Centralized in Services |
-| **Data Access** | Direct database calls | Repository pattern |
-| **Testability** | Hard to test, tightly coupled | Easy to test, loosely coupled |
-| **Extensibility** | Requires modifying existing code | Can extend without modification |
-| **Monitoring** | Hard-coded implementation | Strategy pattern, easily swappable |
-| **Dependencies** | Hard-coded | Dependency injection |
-| **Maintainability** | Low cohesion, high coupling | High cohesion, low coupling |
+#### `src/server.js` (~140 lines)
+- Application entry point
+- Initializes database, monitor, and WebSocket
+- Sets up Express app with middleware
+- Handles graceful shutdown
+
+#### `src/routes.js` (~200 lines)
+- **Clean route handlers** that delegate to services
+- Organized by feature (Health, Metrics, Reports, Events, etc.)
+- Only handles HTTP concerns (request validation, response formatting)
+- All business logic delegated to services
+
+#### `src/config.js` (~60 lines)
+- Environment variable parsing
+- Configuration object
+- Path resolution
+
+### Services Layer
+
+#### `src/services/metrics.service.js` (~40 lines)
+**Responsibilities:**
+- Retrieve measurements from database
+- Parse JSON fields (error, meta, server, client)
+- Handle latest, recent, and date-range queries
+
+**Key functions:**
+- `getLatest()` - Get latest measurement
+- `getRecent(limit)` - Get recent measurements
+- `getByDateRange(from, to)` - Get measurements in date range
+
+#### `src/services/events.service.js` (~40 lines)
+**Responsibilities:**
+- Retrieve events from database
+- Parse JSON metadata
+- Count events by type
+
+**Key functions:**
+- `getRecent(limit)` - Get recent events
+- `getByDateRange(from, to)` - Get events in date range
+- `countByType(events)` - Count events by type
+
+#### `src/services/reports.service.js` (~25 lines)
+**Responsibilities:**
+- Generate reports with measurements + analytics
+- Handle today's report generation
+- Date range reports
+
+**Key functions:**
+- `generateReport(from, to, config)` - Generate full report
+- `generateTodayReport(config)` - Generate today's report
+
+#### `src/services/statistics.service.js` (~50 lines)
+**Responsibilities:**
+- Database statistics
+- Data cleanup and maintenance
+- Detailed statistics generation
+
+**Key functions:**
+- `getDatabaseStats()` - Get DB statistics
+- `cleanupDatabase(retentionHours)` - Clean old data
+- `getDetailedStatistics(from, to, config)` - Get detailed stats
+
+### Core Modules
+
+#### `src/db.js` (~180 lines)
+- Prisma client initialization and connection management
+- All database queries as simple functions
+- Measurement CRUD operations
+- Event CRUD operations
+- Database maintenance (vacuum, stats)
+
+#### `src/monitor.js` (~330 lines)
+- Network speed testing with retry logic
+- Connectivity checks
+- Event detection (connection changes, speed drops/improvements)
+- Monitoring loop management
+- EventEmitter for real-time updates
+
+#### `src/analytics.js` (~180 lines)
+- Summary statistics computation
+- Uptime/downtime calculations
+- Speed drop detection
+- Min/max/average calculations
+- Date range utilities
+
+#### `src/websocket.js` (~215 lines)
+- WebSocket server initialization
+- Real-time measurement broadcasts
+- Event broadcasts
+- Client connection management
+- Heartbeat for dead connection detection
+
+## Design Principles
+
+### 1. Simplicity
+- No DI containers or complex abstractions
+- Simple function exports and imports
+- Straightforward data flow
+
+### 2. Separation of Concerns
+- **Routes**: HTTP request/response handling
+- **Services**: Business logic and data transformation
+- **Database**: Data persistence
+- **Monitor**: Network monitoring
+- **Analytics**: Calculations and statistics
+
+### 3. Single Responsibility
+Each module has one clear purpose:
+- `routes.js` - HTTP routing
+- `metrics.service.js` - Metrics business logic
+- `db.js` - Database operations
+- `monitor.js` - Network monitoring
+
+### 4. Easy to Test
+- Services are pure functions (mostly)
+- Can be tested independently
+- No complex mocking required
+
+### 5. Easy to Understand
+- Clear file names
+- Grouped by feature
+- Minimal abstractions
+- ~1,600 lines total (vs ~3,875 in old architecture)
+
+## Data Flow Examples
+
+### Get Latest Measurement
+```
+HTTP GET /api/metrics/latest
+  ↓
+routes.js → metricsService.getLatest()
+  ↓
+db.getLatestMeasurement()
+  ↓
+Prisma query → Parse JSON → Return
+```
+
+### Generate Today's Report
+```
+HTTP GET /api/metrics/today
+  ↓
+routes.js → reportsService.generateTodayReport(config)
+  ↓
+metricsService.getByDateRange(from, to)
+  ↓
+analytics.computeSummary(measurements, config)
+  ↓
+Return { from, to, summary, measurements }
+```
+
+### Monitoring Loop
+```
+monitor.performMeasurement()
+  ↓
+Network speed test → detectEvents()
+  ↓
+db.insertMeasurement() + db.insertEvent()
+  ↓
+events.emit('measurement') → WebSocket broadcast
+```
 
 ## Benefits of This Architecture
 
-1. **Testability**: Easy to write unit tests with mocked dependencies
-2. **Maintainability**: Clear structure, easy to find and fix bugs
-3. **Scalability**: Easy to add new features without breaking existing code
-4. **Flexibility**: Swap implementations easily (e.g., different data stores)
-5. **Readability**: Code is self-documenting with clear responsibilities
-6. **Reusability**: Services and repositories can be reused across application
-7. **Team Collaboration**: Clear boundaries make parallel development easier
+✅ **Clean Routes**: Route handlers are simple and focused on HTTP concerns
 
-## Usage Example
+✅ **Reusable Services**: Business logic can be reused across routes
 
-```javascript
-// Old way (tightly coupled)
-const storage = new StorageSQLite(db, config.retentionHours);
-const monitor = new Monitor({ storage, intervalMs, ... });
+✅ **Easy to Test**: Services are simple functions that can be tested independently
 
-// New way (loosely coupled, dependency injection)
-const container = new DIContainer(config);
-await container.initialize();
+✅ **Easy to Understand**: Clear structure with ~1,600 lines vs ~3,875 before
 
-const monitorService = container.get('monitorService');
-const measurement = await monitorService.triggerMeasurement();
+✅ **Maintainable**: Changes are localized to specific files
+
+✅ **No Over-engineering**: No DI containers, factories, or abstract interfaces
+
+✅ **Professional**: Still follows best practices with proper separation
+
+## Key Features
+
+- ✅ Network speed monitoring with automatic event detection
+- ✅ Real-time WebSocket updates
+- ✅ Analytics and reporting
+- ✅ Database persistence with Prisma ORM
+- ✅ Graceful shutdown handling
+- ✅ Comprehensive error handling
+- ✅ Configurable via environment variables
+
+## Environment Variables
+
+See `.env.example` for configuration options:
+- `PORT` - HTTP server port
+- `MONITOR_INTERVAL_MS` - Monitoring interval
+- `RETENTION_HOURS` - Data retention period
+- `SPEED_DROP_THRESHOLD_MBPS` - Speed drop threshold
+- `SIMULATION_MODE` - Enable simulation mode
+- And more...
+
+## Getting Started
+
+```bash
+# Install dependencies
+npm install
+
+# Run migrations
+npx prisma migrate deploy
+
+# Start server
+npm start
+
+# Development mode
+npm run dev
 ```
 
-## Migration Path
+## API Endpoints
 
-The refactored code is designed to coexist with the old code. The migration strategy:
-
-1. ✅ **Phase 1**: Create new architecture (Models, Repositories, Services)
-2. 🔄 **Phase 2**: Create Controllers and refactor routes (In Progress)
-3. ⏳ **Phase 3**: Create DI Container and wire everything together
-4. ⏳ **Phase 4**: Update server.js to use new architecture
-5. ⏳ **Phase 5**: Deprecate old files (optional, can keep for reference)
-
-## Testing Strategy
-
-Each layer can be tested independently:
-
-```javascript
-// Test Model
-const measurement = new Measurement({ timestamp: '2024-01-01', status: 'online' });
-assert(measurement.isOnline());
-
-// Test Repository (with mock database)
-const mockDb = createMockDatabase();
-const repo = new MeasurementRepository(mockDb);
-await repo.insert(measurement);
-
-// Test Service (with mock repository)
-const mockRepo = createMockRepository();
-const service = new MonitorService(mockRepo, strategy);
-await service.startMonitoring();
-
-// Test Controller (with mock service)
-const mockService = createMockService();
-const controller = new MetricsController(mockService);
-const response = await controller.getLatest(req, res);
-```
-
-## Next Steps
-
-To complete the refactoring:
-
-1. Finish implementing all Services
-2. Create Controllers for all routes
-3. Implement DI Container
-4. Refactor routes to use Controllers
-5. Refactor WebSocket to use Services
-6. Update server.js to bootstrap the application
-7. Write tests for all layers
-8. Update documentation
-9. Gradually migrate old code (if desired)
+- `GET /api/health` - Health check
+- `GET /api/config` - Get configuration
+- `GET /api/metrics/latest` - Latest measurement
+- `GET /api/metrics/recent` - Recent measurements
+- `GET /api/metrics/today` - Today's report
+- `GET /api/reports?from=...&to=...` - Custom date range report
+- `POST /api/monitor/trigger` - Trigger manual measurement
+- `GET /api/events/recent` - Recent events
+- `GET /api/events?from=...&to=...` - Events in date range
+- `GET /api/database/stats` - Database statistics
+- `POST /api/database/cleanup` - Clean old data
+- `GET /api/statistics/detailed?from=...&to=...` - Detailed statistics
 
 ## Conclusion
 
-This architecture provides a solid foundation for a maintainable, testable, and scalable application. It follows industry best practices and makes the codebase easier to understand and extend.
+This architecture provides a perfect balance between simplicity and maintainability. It's professional, clean, and appropriate for the scale of this application.

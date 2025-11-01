@@ -1,0 +1,199 @@
+import express from 'express';
+import * as monitor from './monitor.js';
+import * as metricsService from './services/metrics.service.js';
+import * as eventsService from './services/events.service.js';
+import * as reportsService from './services/reports.service.js';
+import * as statisticsService from './services/statistics.service.js';
+
+export function createRoutes(config) {
+  const router = express.Router();
+
+  // ==========================================
+  // Health & Config Routes
+  // ==========================================
+
+  router.get('/health', (req, res) => {
+    const status = monitor.getStatus();
+    res.json({
+      status: 'ok',
+      uptime: process.uptime(),
+      monitoring: {
+        running: status.isRunning,
+        lastRun: status.lastRunAt ? new Date(status.lastRunAt).toISOString() : null,
+      },
+    });
+  });
+
+  router.get('/config', (req, res) => {
+    res.json({
+      intervalMs: config.intervalMs,
+      retentionHours: config.retentionHours,
+      speedDropThresholdMbps: config.speedDropThresholdMbps,
+      speedDropPercent: config.speedDropPercent,
+      simulationMode: config.simulationMode,
+    });
+  });
+
+  // ==========================================
+  // Metrics Routes
+  // ==========================================
+
+  router.get('/metrics/latest', async (req, res, next) => {
+    try {
+      const latest = await metricsService.getLatest();
+
+      if (!latest) {
+        return res.status(404).json({ error: 'No measurements found' });
+      }
+
+      res.json(latest);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.get('/metrics/recent', async (req, res, next) => {
+    try {
+      const limit = parseInt(req.query.limit) || 50;
+      const measurements = await metricsService.getRecent(limit);
+      res.json(measurements);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.get('/metrics/today', async (req, res, next) => {
+    try {
+      const report = await reportsService.generateTodayReport(config);
+      res.json(report);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // ==========================================
+  // Reports Routes
+  // ==========================================
+
+  router.get('/reports', async (req, res, next) => {
+    try {
+      const { from, to } = req.query;
+
+      if (!from || !to) {
+        return res.status(400).json({
+          error: 'Missing required query parameters: from, to'
+        });
+      }
+
+      const report = await reportsService.generateReport(from, to, config);
+      res.json(report);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // ==========================================
+  // Monitor Control Routes
+  // ==========================================
+
+  router.post('/monitor/trigger', async (req, res, next) => {
+    try {
+      const measurement = await monitor.performMeasurement({ force: true });
+
+      if (!measurement) {
+        return res.status(500).json({
+          error: 'Failed to perform measurement'
+        });
+      }
+
+      // Parse JSON fields
+      const result = {
+        ...measurement,
+        error: measurement.error ? JSON.parse(measurement.error) : null,
+        meta: measurement.meta ? JSON.parse(measurement.meta) : null,
+        server: measurement.server ? JSON.parse(measurement.server) : null,
+        client: measurement.client ? JSON.parse(measurement.client) : null,
+      };
+
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // ==========================================
+  // Events Routes
+  // ==========================================
+
+  router.get('/events/recent', async (req, res, next) => {
+    try {
+      const limit = parseInt(req.query.limit) || 50;
+      const events = await eventsService.getRecent(limit);
+      res.json(events);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.get('/events', async (req, res, next) => {
+    try {
+      const { from, to } = req.query;
+
+      if (!from || !to) {
+        return res.status(400).json({
+          error: 'Missing required query parameters: from, to'
+        });
+      }
+
+      const events = await eventsService.getByDateRange(from, to);
+      res.json(events);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // ==========================================
+  // Database Routes
+  // ==========================================
+
+  router.get('/database/stats', async (req, res, next) => {
+    try {
+      const stats = await statisticsService.getDatabaseStats();
+      res.json(stats);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post('/database/cleanup', async (req, res, next) => {
+    try {
+      const result = await statisticsService.cleanupDatabase(config.retentionHours);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // ==========================================
+  // Statistics Routes
+  // ==========================================
+
+  router.get('/statistics/detailed', async (req, res, next) => {
+    try {
+      const { from, to } = req.query;
+
+      if (!from || !to) {
+        return res.status(400).json({
+          error: 'Missing required query parameters: from, to'
+        });
+      }
+
+      const statistics = await statisticsService.getDetailedStatistics(from, to, config);
+      res.json(statistics);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  return router;
+}
