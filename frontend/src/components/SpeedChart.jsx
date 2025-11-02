@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { format, parseISO, differenceInHours } from 'date-fns';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceArea } from 'recharts';
+import { format, parseISO, differenceInHours, differenceInMinutes } from 'date-fns';
 import { cn } from '../utils/cn';
 
-export default function SpeedChart({ data = [] }) {
+export default function SpeedChart({ data = [], highlightedTimestamp = null, onHighlight = () => {} }) {
   // Determine the time format based on data range
   const timeFormat = useMemo(() => {
     if (!data || data.length < 2) {
@@ -80,6 +80,42 @@ export default function SpeedChart({ data = [] }) {
     return Math.floor(length / 6);
   }, [chartData.length]);
 
+  // Find highlighted area - find points within 2 minutes of highlighted timestamp
+  const highlightedArea = useMemo(() => {
+    if (!highlightedTimestamp || chartData.length === 0) return null;
+
+    const highlightTime = new Date(highlightedTimestamp).getTime();
+    const TOLERANCE_MS = 2 * 60 * 1000; // 2 minutes tolerance
+
+    // Find the closest point
+    let closestIndex = -1;
+    let closestDiff = Infinity;
+
+    chartData.forEach((point, index) => {
+      const pointTime = new Date(point.timestamp).getTime();
+      const diff = Math.abs(pointTime - highlightTime);
+
+      if (diff < closestDiff) {
+        closestDiff = diff;
+        closestIndex = index;
+      }
+    });
+
+    // If closest point is within tolerance, highlight a small area around it
+    if (closestIndex >= 0 && closestDiff <= TOLERANCE_MS) {
+      const startIndex = Math.max(0, closestIndex - 1);
+      const endIndex = Math.min(chartData.length - 1, closestIndex + 1);
+
+      return {
+        x1: chartData[startIndex].time,
+        x2: chartData[endIndex].time,
+        closestIndex
+      };
+    }
+
+    return null;
+  }, [highlightedTimestamp, chartData]);
+
   // Custom tooltip
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
@@ -117,12 +153,27 @@ export default function SpeedChart({ data = [] }) {
     );
   }
 
+  // Handle mouse move on chart to highlight points
+  const handleMouseMove = (state) => {
+    if (state && state.activePayload && state.activePayload.length > 0) {
+      const timestamp = state.activePayload[0].payload.timestamp;
+      onHighlight(timestamp);
+    }
+  };
+
+  // Handle mouse leave to clear highlight
+  const handleMouseLeave = () => {
+    onHighlight(null);
+  };
+
   return (
     <div className={cn("transition-all duration-300")}>
       <ResponsiveContainer width="100%" height={256}>
         <LineChart
           data={chartData}
           margin={{ top: 5, right: 20, left: 0, bottom: 5 }}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
         >
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" className={cn("transition-opacity duration-300")} />
           <XAxis
@@ -150,6 +201,16 @@ export default function SpeedChart({ data = [] }) {
             wrapperStyle={{ fontSize: '12px' }}
             iconType="line"
           />
+          {/* Highlighted area when hovering */}
+          {highlightedArea && (
+            <ReferenceArea
+              x1={highlightedArea.x1}
+              x2={highlightedArea.x2}
+              fill="#3b82f6"
+              fillOpacity={0.1}
+              strokeOpacity={0.3}
+            />
+          )}
           <Line
             type="monotone"
             dataKey="download"

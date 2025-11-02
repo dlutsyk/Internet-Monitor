@@ -40,6 +40,9 @@ export default function Dashboard() {
     return saved || '24h';
   });
 
+  // Highlighted timestamp for synchronized chart/events highlighting
+  const [highlightedTimestamp, setHighlightedTimestamp] = useState(null);
+
   // Save time range to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('dashboardTimeRange', selectedTimeRange);
@@ -306,7 +309,11 @@ export default function Dashboard() {
                   </div>
                 </div>
               ) : (
-                <SpeedChart data={filteredData} />
+                <SpeedChart
+                  data={filteredData}
+                  highlightedTimestamp={highlightedTimestamp}
+                  onHighlight={setHighlightedTimestamp}
+                />
               )}
             </div>
 
@@ -314,6 +321,8 @@ export default function Dashboard() {
             <ConnectionEventsCard
               connectionEvents={connectionEvents}
               eventsLoading={eventsLoading}
+              highlightedTimestamp={highlightedTimestamp}
+              onHighlight={setHighlightedTimestamp}
             />
           </div>
 

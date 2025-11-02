@@ -54,7 +54,17 @@ const getEventPulseColor = (type) => {
   return colorMap[type] || '';
 };
 
-export default function ConnectionEventsCard({ connectionEvents, eventsLoading }) {
+export default function ConnectionEventsCard({ connectionEvents, eventsLoading, highlightedTimestamp = null, onHighlight = () => {} }) {
+  // Check if an event is highlighted based on timestamp proximity (within 2 minutes)
+  const isEventHighlighted = (eventTimestamp) => {
+    if (!highlightedTimestamp) return false;
+
+    const highlightTime = new Date(highlightedTimestamp).getTime();
+    const eventTime = new Date(eventTimestamp).getTime();
+    const TOLERANCE_MS = 2 * 60 * 1000; // 2 minutes tolerance
+
+    return Math.abs(highlightTime - eventTime) <= TOLERANCE_MS;
+  };
   return (
     <div className={cn("bg-white border border-neutral-200 rounded-lg p-6 transition-all duration-300")}>
       <div className={cn("flex justify-between items-center mb-4")}>
@@ -81,14 +91,23 @@ export default function ConnectionEventsCard({ connectionEvents, eventsLoading }
           </div>
         ) : (
           <div className={cn("h-64 overflow-y-auto pr-2 -mr-2")}>
-            {connectionEvents.slice().reverse().map((event, index) => (
-              <div
-                key={event.id}
-                className={cn(`py-2 flex justify-between items-center transition-all duration-300 hover:bg-neutral-50 rounded px-2 -mx-2 animate-fadeIn ${
-                  index < connectionEvents.length - 1 ? 'border-b border-neutral-100' : ''
-                }`)}
-                style={{ animationDelay: `${Math.min(index * 50, 500)}ms` }}
-              >
+            {connectionEvents.slice().reverse().map((event, index) => {
+              const isHighlighted = isEventHighlighted(event.timestamp);
+
+              return (
+                <div
+                  key={event.id}
+                  className={cn(`py-2 flex justify-between items-center transition-all duration-300 rounded px-2 -mx-2 animate-fadeIn cursor-pointer ${
+                    index < connectionEvents.length - 1 ? 'border-b border-neutral-100' : ''
+                  } ${
+                    isHighlighted
+                      ? 'bg-blue-50 shadow-sm scale-105'
+                      : 'hover:bg-neutral-50'
+                  }`)}
+                  style={{ animationDelay: `${Math.min(index * 50, 500)}ms` }}
+                  onMouseEnter={() => onHighlight(event.timestamp)}
+                  onMouseLeave={() => onHighlight(null)}
+                >
                 <div className={cn("flex items-center gap-3")}>
                   <div className={cn(`${getEventColor(event.type)} rounded-full h-2 w-2 transition-transform duration-200 ${
                     index === 0 ? 'animate-ping' : ''
@@ -101,7 +120,8 @@ export default function ConnectionEventsCard({ connectionEvents, eventsLoading }
                   {formatEventTime(event.timestamp)}
                 </p>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
