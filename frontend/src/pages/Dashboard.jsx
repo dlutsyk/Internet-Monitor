@@ -31,8 +31,8 @@ export default function Dashboard() {
     reconnect
   } = useRealtimeMetrics();
 
-  // Connection events
-  const { events: connectionEvents, loading: eventsLoading } = useConnectionEvents(subscribeToMessages, 20);
+  // Connection events - fetch all events without limit
+  const { events: connectionEvents, loading: eventsLoading } = useConnectionEvents(subscribeToMessages, 1000);
 
   // Time range filter state with localStorage persistence
   const [selectedTimeRange, setSelectedTimeRange] = useState(() => {

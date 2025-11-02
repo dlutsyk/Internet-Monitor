@@ -14,7 +14,22 @@ const formatEventType = (type) => {
 // Helper function to format event time
 const formatEventTime = (timestamp) => {
   const date = new Date(timestamp);
-  return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+
+  // If today, show only time
+  if (isToday) {
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+  }
+
+  // If not today, show date and time
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  });
 };
 
 // Helper function to get event color
@@ -42,7 +57,7 @@ const getEventPulseColor = (type) => {
 export default function ConnectionEventsCard({ connectionEvents, eventsLoading }) {
   return (
     <div className={cn("bg-white border border-neutral-200 rounded-lg p-6 transition-all duration-300")}>
-      <div className={cn("flex justify-between items-center mb-6")}>
+      <div className={cn("flex justify-between items-center mb-4")}>
         <p className={cn("text-lg text-neutral-900 transition-colors duration-200")}>
           Connection Events
         </p>
@@ -54,36 +69,40 @@ export default function ConnectionEventsCard({ connectionEvents, eventsLoading }
       </div>
       <div className={cn("flex flex-col")}>
         {eventsLoading ? (
-          <div className={cn("py-8 text-center")}>
-            <div className={cn("animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent mx-auto mb-2")} />
-            <p className={cn("text-sm text-neutral-500")}>Loading events...</p>
+          <div className={cn("h-64 flex items-center justify-center")}>
+            <div className={cn("flex flex-col items-center gap-3")}>
+              <div className={cn("animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent")} />
+              <p className={cn("text-sm text-neutral-500")}>Loading events...</p>
+            </div>
           </div>
         ) : connectionEvents.length === 0 ? (
-          <div className={cn("py-8 text-center text-neutral-500 transition-opacity duration-300")}>
+          <div className={cn("h-64 flex items-center justify-center text-neutral-500 transition-opacity duration-300")}>
             <p className={cn("text-sm")}>No events recorded yet</p>
           </div>
         ) : (
-          connectionEvents.slice(0, 4).map((event, index) => (
-            <div
-              key={event.id}
-              className={cn(`py-2 flex justify-between items-center transition-all duration-300 hover:bg-neutral-50 rounded px-2 -mx-2 animate-fadeIn ${
-                index < connectionEvents.slice(0, 4).length - 1 ? 'border-b border-neutral-100' : ''
-              }`)}
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              <div className={cn("flex items-center gap-3")}>
-                <div className={cn(`${getEventColor(event.type)} rounded-full h-2 w-2 transition-transform duration-200 ${
-                  index === 0 ? 'animate-ping' : ''
-                }`)} />
-                <p className={cn("text-sm text-neutral-900 transition-colors duration-200")}>
-                  {formatEventType(event.type)}
+          <div className={cn("h-64 overflow-y-auto pr-2 -mr-2")}>
+            {connectionEvents.slice().reverse().map((event, index) => (
+              <div
+                key={event.id}
+                className={cn(`py-2 flex justify-between items-center transition-all duration-300 hover:bg-neutral-50 rounded px-2 -mx-2 animate-fadeIn ${
+                  index < connectionEvents.length - 1 ? 'border-b border-neutral-100' : ''
+                }`)}
+                style={{ animationDelay: `${Math.min(index * 50, 500)}ms` }}
+              >
+                <div className={cn("flex items-center gap-3")}>
+                  <div className={cn(`${getEventColor(event.type)} rounded-full h-2 w-2 transition-transform duration-200 ${
+                    index === 0 ? 'animate-ping' : ''
+                  }`)} />
+                  <p className={cn("text-sm text-neutral-900 transition-colors duration-200")}>
+                    {formatEventType(event.type)}
+                  </p>
+                </div>
+                <p className={cn("text-sm text-neutral-500 transition-opacity duration-200")}>
+                  {formatEventTime(event.timestamp)}
                 </p>
               </div>
-              <p className={cn("text-sm text-neutral-500 transition-opacity duration-200")}>
-                {formatEventTime(event.timestamp)}
-              </p>
-            </div>
-          ))
+            ))}
+          </div>
         )}
       </div>
     </div>

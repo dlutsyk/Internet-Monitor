@@ -6,7 +6,7 @@ import { getRecentEvents } from '../services/api.js';
  * @param {Function} subscribeToMessages - Function from useRealtimeMetrics to subscribe to WebSocket messages
  * @param {number} limit - Maximum number of events to keep
  */
-export default function useConnectionEvents(subscribeToMessages, limit = 20) {
+export default function useConnectionEvents(subscribeToMessages, limit = 1000) {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
